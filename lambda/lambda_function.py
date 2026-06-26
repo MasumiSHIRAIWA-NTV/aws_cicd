@@ -1,10 +1,30 @@
 import json
+from pathlib import Path
+
 import boto3 # AWSが公式に提供しているPython用のSDK。プログラムやスクリプトからあらゆるAWSサービスを構築・操作・自動化できる。
 from boto3.dynamodb.conditions import Key # 条件式（Key）をシンプルに書くために追加
+
+BASE_DIR = Path(__file__).resolve().parent
+MAPPING_FILE = BASE_DIR / 'mappin.json'
+_mapping_cache = None
+
+
+def load_mapping():
+    global _mapping_cache
+    if _mapping_cache is None:
+        with MAPPING_FILE.open('r', encoding='utf-8') as f:
+            _mapping_cache = json.load(f)
+    return _mapping_cache
+
 
 # 自動デプロイテスト用追加OK
 
 def lambda_handler(event, context):
+    # `mappin.json` を読み込み
+    mapping = load_mapping()
+    print('--- mapping.json を読み込みました ---')
+    print(mapping)
+
     # DynamoDBクライアントを作成
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('masumi-regional_weather_table_sort')
