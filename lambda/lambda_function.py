@@ -2,7 +2,7 @@ import json
 import boto3 # AWSが公式に提供しているPython用のSDK。プログラムやスクリプトからあらゆるAWSサービスを構築・操作・自動化できる。
 from boto3.dynamodb.conditions import Key # 条件式（Key）をシンプルに書くために追加
 
-# あああ
+# 自動デプロイテスト用追加
 
 def lambda_handler(event, context):
     # DynamoDBクライアントを作成
