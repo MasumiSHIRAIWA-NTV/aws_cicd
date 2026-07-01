@@ -1,4 +1,5 @@
 import json
+import time
 from pathlib import Path
 
 import boto3 # AWSが公式に提供しているPython用のSDK。プログラムやスクリプトからあらゆるAWSサービスを構築・操作・自動化できる。
@@ -20,39 +21,40 @@ def load_mapping():
 # 自動デプロイテスト用追加OK
 
 def lambda_handler(event, context):
-    # `mappin.json` を読み込み
-    mapping = load_mapping()
-    print('--- mapping.json を読み込みました ---')
-    print(mapping)
-
     # DynamoDBクライアントを作成
     dynamodb = boto3.resource('dynamodb')
     table = dynamodb.Table('masumi-regional_weather_table_sort')
     
-    # --- 1. 全件取得 (scan) ---
-    responseall = table.scan()
-    print('--- レスポンスを出力(scan) ---')
-    print(responseall)
+    # --- get_itemとqueryを500回実行 ---
+    processing_times = []
     
-    # --- 2. 単一のデータを取り出す (get_item) ---
-    response_get_item = table.get_item( 
-        Key={
-            'area_id': 'Tokyo',
-            'created_at': 202606231100  # 【修正】ダブルクォーテーションを外し、数値（Int）にする
-        }
-    )
-    print('--- レスポンスを出力(get_item) ---')
-    print(response_get_item)
-
-    # --- 3. ソートキーを使って範囲検索する (query) ---
-    response_query = table.query( 
-        # 【修正】パーティションキーの指定を追加し、{} を外す
-        KeyConditionExpression=Key('area_id').eq('Tokyo') & Key('created_at').between(202606240000, 202606242359)
-    )
-    print('--- レスポンスを出力(query) ---')
-    print(response_query)
+    for i in range(500):
+        start_time = time.time()
+        
+        # --- 1. 単一のデータを取り出す (get_item) ---
+        response_get_item = table.get_item( 
+            Key={
+                'area_id': 'Tokyo',
+                'created_at': 202606231100
+            }
+        )
+        
+        # --- 2. ソートキーを使って範囲検索する (query) ---
+        response_query = table.query( 
+            KeyConditionExpression=Key('area_id').eq('Tokyo') & Key('created_at').between(202606240000, 202606242359)
+        )
+        
+        end_time = time.time()
+        elapsed_time = end_time - start_time
+        processing_times.append(elapsed_time)
+        
+        print(f'--- 処理 {i+1}: {elapsed_time:.6f}秒 ---')
+    
+    # --- 平均処理秒数を計算して出力 ---
+    average_time = sum(processing_times) / len(processing_times)
+    print(f'\n=== 平均処理秒数: {average_time:.6f}秒 ===')
 
     return {
         'statusCode': 200,
-        'body': json.dumps('Hello from Lambda!')
+        'body': json.dumps(f'Average processing time: {average_time:.6f} seconds')
     }
